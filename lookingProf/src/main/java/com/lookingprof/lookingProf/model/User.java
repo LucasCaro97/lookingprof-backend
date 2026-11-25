@@ -22,11 +22,11 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 
 
 @Entity
+@Table(name = "user")
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -34,6 +34,7 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_user")
     private Integer idUser;
         @NotEmpty(message = "El apellido no puede estar vacío")
     private String lastName;
@@ -53,20 +54,18 @@ public class User implements UserDetails {
     private String country;
 
     @ManyToOne
-    @JoinColumn(name = "idProvince", referencedColumnName = "idProvince")
-//    @NotEmpty(message = "Debe seleccionar una provincia")
+    @JoinColumn(name = "id_province", referencedColumnName = "id_province")
     private Province province;
 
     @ManyToOne
-    @JoinColumn(name = "idCity", referencedColumnName = "idCity")
-//    @NotEmpty(message = "Debe seleccionar una ciudad")
+    @JoinColumn(name = "id_city", referencedColumnName = "id_city")
     private City city;
 
     private Integer qualification;
     private String imageUrl;
 
     @ManyToOne
-    @JoinColumn(name = "idProfession")
+    @JoinColumn(name = "id_profession")
     private Profession profession;
     @Enumerated(EnumType.STRING)
     private Role role;
@@ -81,12 +80,10 @@ public class User implements UserDetails {
     private List<Comment> commentsReceived;
 
     @CreationTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false, updatable = false)
     private LocalDateTime createAt;
 
     @UpdateTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false)
     private LocalDateTime updateAt;
 
@@ -94,7 +91,7 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority((role.name())));
+        return List.of(new SimpleGrantedAuthority(role.name()));
     }
 
     @Override
@@ -106,26 +103,4 @@ public class User implements UserDetails {
     public String getUsername() {
         return this.email;
     }
-
-    @Override
-    public boolean isAccountNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isAccountNonLocked() {
-        return true;
-    }
-
-    @Override
-    public boolean isCredentialsNonExpired() {
-        return true;
-    }
-
-    @Override
-    public boolean isEnabled() {
-        return true;
-    }
-
-
 }

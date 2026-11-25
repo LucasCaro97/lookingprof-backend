@@ -1,8 +1,7 @@
 package com.lookingprof.lookingProf.utils;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.util.List;
 import java.util.Map;
@@ -10,7 +9,7 @@ import java.util.Map;
 @Component
 public class UserData {
 
-    public List<Map<String, Object>> jsonData() throws JsonProcessingException {
+    public List<Map<String, Object>> jsonData() {
         String json =  "[" +
                 "{\"firstName\": \"Marcela\", \"lastName\": \"Fernández\", \"email\": \"marcelafernandez@gmail.com\", \"password\": \"hashed_password_1\"," +
                 " \"phone\": \"+5491252985471\", \"address\": \"Calle Principal 2678\", \"country\": \"Argentina\", \"imageUrl\": \"https://res.cloudinary.com/dlq0ud8ly/image/upload/v1709574374/LookingProf/roman-akhmerov-Js6Hwobewi8-unsplash_nss7qf.jpg\"," +
@@ -54,11 +53,11 @@ public class UserData {
                 "]"
         ;
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        JsonMapper objectMapper = JsonMapper.builder().build();
         return objectMapper.readValue(json, List.class);
     }
 
-    public List<Map<String, Object>> jsonData2() throws JsonProcessingException {
+    public List<Map<String, Object>> jsonData2() {
         String json = "[" +
                 "{\"firstName\": \"Mónica\", \"lastName\": \"Velarde\", \"email\": \"monicavelarde@gmail.com\", \"password\": \"hashed_password_1\"," +
                 " \"phone\": \"+5491252985471\", \"address\": \"Calle Principal 2678\", \"country\": \"Argentina\", \"imageUrl\": \"https://res.cloudinary.com/dlq0ud8ly/image/upload/v1709768052/LookingProf/adam-winger-ZsUbK9zSgMo-unsplash_rxorlr.jpg\"," +
@@ -72,11 +71,11 @@ public class UserData {
                 "]"
                 ;
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        JsonMapper objectMapper = JsonMapper.builder().build();
         return objectMapper.readValue(json, List.class);
     }
 
-    public List<Map<String, Object>> jsonData3() throws JsonProcessingException {
+    public List<Map<String, Object>> jsonData3() {
         String json = "[" +
                 "{\"firstName\": \"Ana\", \"lastName\": \"Martínez\", \"email\": \"anamartinez@example.com\", \"password\": \"hashed_password_4\"," +
                 "\"phone\": \"+5491357924680\", \"address\": \"Avenida Central 789\", \"country\": \"Argentina\", \"imageUrl\": \"https://res.cloudinary.com/dlq0ud8ly/image/upload/v1709768052/LookingProf/daria-pimkina-tYaccl19A3Q-unsplash_tc40ft.jpg\"," +
@@ -90,11 +89,11 @@ public class UserData {
                 "]"
                 ;
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        JsonMapper objectMapper = JsonMapper.builder().build();
         return objectMapper.readValue(json, List.class);
     }
 
-    public List<Map<String, Object>> jsonData4() throws JsonProcessingException {
+    public List<Map<String, Object>> jsonData4() {
         String json = "[" +
                 "{\"firstName\": \"Laura\", \"lastName\": \"Rodríguez\", \"email\": \"laurarodriguez@example.com\", \"password\": \"hashed_password_7\"," +
                 "\"phone\": \"+5491789562341\", \"address\": \"Calle Secundaria 789\", \"country\": \"Argentina\", \"imageUrl\": \"https://res.cloudinary.com/dlq0ud8ly/image/upload/v1709768052/LookingProf/helena-lopes-_SzvRwdFo6o-unsplash_cnznx8.jpg\"," +
@@ -108,7 +107,7 @@ public class UserData {
                 "]"
                 ;
 
-        ObjectMapper objectMapper = new ObjectMapper();
+        JsonMapper objectMapper = JsonMapper.builder().build();
         return objectMapper.readValue(json, List.class);
     }
 

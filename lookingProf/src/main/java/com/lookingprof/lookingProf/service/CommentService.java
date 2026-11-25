@@ -3,10 +3,12 @@ package com.lookingprof.lookingProf.service;
 import com.lookingprof.lookingProf.dto.CommentDTORequest;
 import com.lookingprof.lookingProf.dto.CommentDTOResponse;
 import com.lookingprof.lookingProf.model.Comment;
+import com.lookingprof.lookingProf.model.Enum.Role;
 import com.lookingprof.lookingProf.model.User;
 import com.lookingprof.lookingProf.repository.ICommentRepository;
 import com.lookingprof.lookingProf.repository.IUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,57 +83,107 @@ public class CommentService implements ICommentService {
      @Override
     @Transactional
     public CommentDTOResponse createComment(CommentDTORequest dto) {
-        try{
-            Comment comment = new Comment();
-            comment.setDescription(dto.getDescription());
-            comment.setQualification(dto.getQualification());
-            comment.setUserOrigin(userRepository.findById(dto.getUserOrigin()).orElse(null));
-            comment.setUserDestination(userRepository.findById(dto.getUserDestination()).orElse(null));
-            comment.setCreatedAt(LocalDateTime.now());
-            comment.setUpdatedAt(null);
-            iCommentRepository.save(comment);
+        return createComment(dto, null);
+    }
 
-            CommentDTOResponse commentDTOResponse = new CommentDTOResponse(comment);
-            return commentDTOResponse;
-        }catch (Exception e){
-            e.printStackTrace();
-            throw new RuntimeException("Error creating comment");
+    @Transactional
+    public CommentDTOResponse createComment(CommentDTORequest dto, User currentUser) {
+        User origin = currentUser != null
+                ? currentUser
+                : userRepository.findById(dto.getUserOrigin()).orElseThrow(() -> new IllegalArgumentException("Usuario origen no encontrado"));
+        User destination = userRepository.findById(dto.getUserDestination())
+                .orElseThrow(() -> new IllegalArgumentException("Profesional no encontrado"));
+
+        if (origin.getIdUser().equals(destination.getIdUser())) {
+            throw new IllegalArgumentException("No podés calificarte a vos mismo");
         }
+        validateQualification(dto.getQualification());
+
+        Comment comment = new Comment();
+        comment.setDescription(dto.getDescription());
+        comment.setQualification(dto.getQualification());
+        comment.setUserOrigin(origin);
+        comment.setUserDestination(destination);
+        comment.setCreatedAt(LocalDateTime.now());
+        iCommentRepository.save(comment);
+        refreshQualification(destination);
+        return new CommentDTOResponse(comment);
     }
 
     @Override
     @Transactional
     public CommentDTOResponse updateComment(Integer id, CommentDTORequest dto) {
-        try{
-            Comment comment = iCommentRepository.findById(id).orElse(null);
-            if(comment==null) throw new RuntimeException("Comment not found");
-
-            comment.setDescription(dto.getDescription());
-            comment.setQualification(dto.getQualification());
-            comment.setUserOrigin(userRepository.findById(dto.getUserOrigin()).orElse(null));
-            comment.setUserDestination(userRepository.findById(dto.getUserDestination()).orElse(null));
-            comment.setUpdatedAt(LocalDateTime.now());
-            iCommentRepository.save(comment);
-
-            CommentDTOResponse commentDTOResponse = new CommentDTOResponse(comment);
-            return commentDTOResponse;
-        }catch (Exception e){
-            throw new RuntimeException("Error creating comment");
-        }
+        return updateComment(id, dto, null);
     }
 
+    @Transactional
+    public CommentDTOResponse updateComment(Integer id, CommentDTORequest dto, User currentUser) {
+        Comment comment = iCommentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Comentario no encontrado"));
+        assertCanMutate(comment, currentUser);
+        validateQualification(dto.getQualification());
+
+        comment.setDescription(dto.getDescription());
+        comment.setQualification(dto.getQualification());
+        comment.setUpdatedAt(LocalDateTime.now());
+        iCommentRepository.save(comment);
+        refreshQualification(comment.getUserDestination());
+        return new CommentDTOResponse(comment);
+    }
 
     @Override
     @Transactional
     public HashMap<String, String> deleteComment(Integer id) {
-        try {
-            HashMap<String, String> response = new HashMap<>();
-            response.put("message", "Comment was deleted succesfully");
-            iCommentRepository.deleteById(id);
-            return response;
-        }catch (Exception e){
-            throw new RuntimeException("Error while deleting comment");
+        return deleteComment(id, null);
+    }
+
+    @Transactional
+    public HashMap<String, String> deleteComment(Integer id, User currentUser) {
+        Comment comment = iCommentRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Comentario no encontrado"));
+        assertCanMutate(comment, currentUser);
+        User destination = comment.getUserDestination();
+        iCommentRepository.deleteById(id);
+        refreshQualification(destination);
+        HashMap<String, String> response = new HashMap<>();
+        response.put("message", "Comment was deleted succesfully");
+        return response;
+    }
+
+    private void assertCanMutate(Comment comment, User currentUser) {
+        if (currentUser == null) {
+            return;
         }
+        boolean owner = comment.getUserOrigin() != null && comment.getUserOrigin().getIdUser().equals(currentUser.getIdUser());
+        boolean admin = currentUser.getRole() == Role.ADMIN;
+        if (!owner && !admin) {
+            throw new AccessDeniedException("No autorizado");
+        }
+    }
+
+    private void validateQualification(Integer qualification) {
+        if (qualification == null || qualification < 1 || qualification > 5) {
+            throw new IllegalArgumentException("La calificación debe ser un valor entre 1 y 5");
+        }
+    }
+
+    private void refreshQualification(User destination) {
+        if (destination == null) {
+            return;
+        }
+        List<Comment> comments = iCommentRepository.findByUserDestination(destination);
+        if (comments.isEmpty()) {
+            destination.setQualification(null);
+        } else {
+            int average = (int) Math.round(comments.stream()
+                    .map(Comment::getQualification)
+                    .filter(Objects::nonNull)
+                    .mapToInt(Integer::intValue)
+                    .average()
+                    .orElse(0));
+            destination.setQualification(average);
+        }
+        userRepository.save(destination);
     }
 
     @Override

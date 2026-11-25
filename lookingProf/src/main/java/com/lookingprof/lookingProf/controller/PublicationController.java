@@ -6,13 +6,10 @@ package com.lookingprof.lookingProf.controller;
 import com.lookingprof.lookingProf.service.PublicationService;
 import lombok.RequiredArgsConstructor;
 import com.lookingprof.lookingProf.model.Publication;
-import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-
-@Service
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/publication")

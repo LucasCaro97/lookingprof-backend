@@ -23,7 +23,7 @@ public class CityDTO {
     public CityDTO (City city){
         this.idCity=city.getIdCity();
         this.nameCity=city.getNameCity();
-        this.idProvince=city.getProvince().getIdProvince();
+        this.idProvince = city.getProvince() != null ? city.getProvince().getIdProvince() : null;
     }
 
 }

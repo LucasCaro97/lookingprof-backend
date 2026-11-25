@@ -8,16 +8,18 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(name = "uk_city_province_name", columnNames = {"fk_province", "name_city"}))
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class City {
 
     @Id
-    @GeneratedValue (strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_city")
     private int idCity;
 
-    //@Column(unique = true)
+    @Column(name = "name_city", length = 180)
     private String nameCity;
 
     @ManyToOne

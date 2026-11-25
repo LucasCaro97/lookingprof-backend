@@ -34,3 +34,6 @@ build/
 
 ### Environment Variables ###
 .env
+
+### Uploads (fotos de perfil locales) ###
+uploads/

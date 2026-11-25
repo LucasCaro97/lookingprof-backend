@@ -3,9 +3,13 @@ package com.lookingprof.lookingProf.service;
 import com.lookingprof.lookingProf.config.Auth.AuthResponse;
 import com.lookingprof.lookingProf.config.Auth.LoginRequest;
 import com.lookingprof.lookingProf.config.Auth.RegisterRequest;
+import com.lookingprof.lookingProf.dto.ContactResponseDTO;
+import com.lookingprof.lookingProf.dto.PageResponse;
+import com.lookingprof.lookingProf.dto.ProfessionalPublicDTO;
 import com.lookingprof.lookingProf.dto.UserRequestDTO;
 import com.lookingprof.lookingProf.dto.UserResponseDTO;
 import com.lookingprof.lookingProf.exceptions.UserDeleteException;
+import com.lookingprof.lookingProf.exceptions.UserNotFoundException;
 import com.lookingprof.lookingProf.exceptions.UserUpdateException;
 import com.lookingprof.lookingProf.jwt.JwtService;
 import com.lookingprof.lookingProf.model.City;
@@ -15,6 +19,8 @@ import com.lookingprof.lookingProf.model.User;
 import com.lookingprof.lookingProf.repository.ICityRepository;
 import com.lookingprof.lookingProf.repository.IUserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -68,6 +74,58 @@ public class UserService implements IUserService {
             listUserDTO.add(userResponseDTO);
         });
         return Optional.of(listUserDTO);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfessionalPublicDTO> listPublicProfessionals() {
+        return userRepository.findAllNotDeleted().stream()
+                .filter(user -> user.getRole() == Role.PROFESSIONAL)
+                .map(ProfessionalPublicDTO::new)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageResponse<ProfessionalPublicDTO> searchProfessionals(
+            String profession,
+            String province,
+            String city,
+            Integer professionId,
+            Integer provinceId,
+            Integer cityId,
+            Pageable pageable
+    ) {
+        Page<ProfessionalPublicDTO> page = userRepository.searchProfessionals(
+                blankToNull(profession),
+                blankToNull(province),
+                blankToNull(city),
+                professionId,
+                provinceId,
+                cityId,
+                pageable
+        ).map(ProfessionalPublicDTO::new);
+        return PageResponse.from(page);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<ProfessionalPublicDTO> findPublicById(Integer id) {
+        return userRepository.findById(id)
+                .filter(user -> user.getRole() == Role.PROFESSIONAL)
+                .filter(user -> user.getIsActive() == null || user.getIsActive())
+                .map(ProfessionalPublicDTO::new);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public ContactResponseDTO getContact(Integer id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("No se encontraron usuarios"));
+        if (user.getRole() != Role.PROFESSIONAL) {
+            throw new UserNotFoundException("No se encontraron usuarios");
+        }
+        return new ContactResponseDTO(user);
     }
 
     @Override
@@ -236,15 +294,32 @@ public class UserService implements IUserService {
 
     @Override
     public AuthResponse registerUser(RegisterRequest request) {
+        Role requestedRole = request.getRole();
+        if (requestedRole == null || requestedRole == Role.ADMIN) {
+            throw new IllegalArgumentException("Rol inválido");
+        }
+        if (requestedRole != Role.USER && requestedRole != Role.PROFESSIONAL) {
+            throw new IllegalArgumentException("Rol inválido");
+        }
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new IllegalArgumentException("El correo ingresado ya está registrado");
+        }
+
         Province province = provinceService.getProvinceById(request.getProvinceId());
         City city = cityService.getCityById(request.getCityId());
-        System.out.println(request.getRole() + " " + request.getRole().getClass());
+        if (province == null || city == null) {
+            throw new IllegalArgumentException("Provincia o ciudad inválida");
+        }
+        if (city.getProvince() == null || city.getProvince().getIdProvince() != province.getIdProvince()) {
+            throw new IllegalArgumentException("La ciudad no pertenece a la provincia seleccionada");
+        }
+
         User user = new User();
         user.setEmail(request.getEmail());
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.valueOf(String.valueOf(request.getRole())));
+        user.setRole(requestedRole);
         user.setProvince(province);
         user.setCity(city);
         user.setIsActive(true);
@@ -253,6 +328,10 @@ public class UserService implements IUserService {
         return AuthResponse.builder()
                 .token(token)
                 .build();
+    }
+
+    private String blankToNull(String value) {
+        return (value == null || value.isBlank()) ? null : value.trim();
     }
 
     @Override
